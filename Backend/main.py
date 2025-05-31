@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import database, create_table
 # Import the APIRouters from app.py, which is a sibling
 from app import users_router, app_router
-import uvicorn # Import uvicorn
+import uvicorn  # Import uvicorn
 
 # Define the lifespan context manager
 @asynccontextmanager
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
     # Print the Swagger UI URL on startup
     # FastAPI's default Swagger UI is at /docs
-    swagger_ui_url = "http://127.0.0.1:8000/docs" # Assuming default host and port
+    swagger_ui_url = "http://127.0.0.1:8000/docs"  # Assuming default host and port
     print(f"Swagger UI available at: {swagger_ui_url}")
     
     yield
@@ -34,7 +34,7 @@ app = FastAPI(
     title="Geophysical Data API",
     description="API for managing user accounts, gravity data processing, and earthquake data retrieval.",
     version="1.0.0",
-    lifespan=lifespan # Assign the lifespan context manager here
+    lifespan=lifespan  # Assign the lifespan context manager here
 )
 
 # Allow CORS for all origins (adjust as necessary for production)
@@ -48,7 +48,7 @@ app.add_middleware(
 
 # Include routers for different functionalities
 app.include_router(users_router, prefix="/users", tags=["Users"])
-app.include_router(app_router, prefix="/app_router", tags=["Gravity Data"])
+app.include_router(app_router, prefix="/app_router", tags=["Geophysical Data"])
 
 @app.get("/", summary="Root endpoint")
 async def root():
@@ -57,6 +57,6 @@ async def root():
     """
     return {"message": "Welcome to the Geophysical Data API!"}
 
-# This block will only run when the script is executed directly
+# This block will only be executed when the script is run directly, not when imported
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

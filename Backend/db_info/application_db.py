@@ -4,7 +4,8 @@ import io
 import sqlalchemy
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-import database 
+from Schema.gravity_schema import EarthquakeQuery
+from database import database 
 from models import gravity_data, earthquakes
 
 # --- Gravity Data Operations ---
@@ -16,6 +17,9 @@ async def load_gravity_data_from_csv(csv_contents: bytes) -> int:
     Clears existing gravity data before inserting new data.
     """
     df = pd.read_csv(io.BytesIO(csv_contents))
+
+    # Convert DataFrame column names to lowercase
+    df.columns = df.columns.str.lower()
 
     # Validate required columns
     required_columns = ['latitude', 'longitude', 'elevation', 'gravity']
@@ -58,7 +62,6 @@ async def update_gravity_data(df: pd.DataFrame) -> None:
     """
     Updates existing gravity data in the database based on the DataFrame.
     This function assumes the DataFrame contains an 'id' column for existing records.
-    If 'id' is not present, it will re-insert all data (less efficient).
     For calculated fields (bouguer, cluster, anomaly, distance_km), it updates them.
     """
     if 'id' not in df.columns:
@@ -91,33 +94,24 @@ async def update_gravity_data(df: pd.DataFrame) -> None:
                 await database.execute(query)
 
 # --- Earthquake Data Operations ---
-
-async def get_earthquakes(
-    start_date: datetime,
-    end_date: datetime,
-    min_mag: Optional[float] = None,
-    max_mag: Optional[float] = None,
-    min_depth: Optional[float] = None,
-    max_depth: Optional[float] = None,
-) -> List[Dict[str, Any]]:
+async def get_earthquakes(query: EarthquakeQuery) -> List[Dict[str, Any]]:
     """
-    Fetches earthquake data from the database based on various filters.
+    Fetches earthquake data from the database based on the provided query parameters.
     """
-    query = earthquakes.select().where(
-        earthquakes.c.time >= start_date,
-        earthquakes.c.time <= end_date
+    sql_query = earthquakes.select().where(
+    earthquakes.c.time >= query.start_date,
+    earthquakes.c.time <= query.end_date
     )
 
-    if min_mag is not None:
-        query = query.where(earthquakes.c.mag >= min_mag)
-    if max_mag is not None:
-        query = query.where(earthquakes.c.mag <= max_mag)
-    if min_depth is not None:
-        query = query.where(earthquakes.c.depth >= min_depth)
-    if max_depth is not None:
-        query = query.where(earthquakes.c.depth <= max_depth)
+    if query.min_mag is not None:
+        sql_query = sql_query.where(earthquakes.c.mag >= query.min_mag)
+    if query.max_mag is not None:
+        sql_query = sql_query.where(earthquakes.c.mag <= query.max_mag)
+    if query.min_depth is not None:
+        sql_query = sql_query.where(earthquakes.c.depth >= query.min_depth)
+    if query.max_depth is not None:
+        sql_query = sql_query.where(earthquakes.c.depth <= query.max_depth)
 
-    # Note: Ordering is done in Python as orderBy() can cause index issues in Firestore.
-    # For SQL databases, orderBy() is usually fine, but sticking to the general guideline.
-    records = await database.fetch_all(query)
+    records = await database.fetch_all(sql_query)
+    
     return [dict(record) for record in records]

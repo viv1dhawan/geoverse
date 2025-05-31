@@ -95,7 +95,7 @@ async def create_password_reset_token(email: str) -> str:
         str: The generated token.
     """
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=1) # Token valid for 1 hour
+    expires_at = datetime.utcnow() + timedelta(hours=1)  # Token valid for 1 hour
 
     # Delete any existing tokens for this email to ensure only one active token
     delete_query = password_reset_tokens.delete().where(password_reset_tokens.c.email == email)
@@ -151,7 +151,7 @@ async def generate_verification_token(email: str) -> str:
         str: The generated token.
     """
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=24) # Token valid for 24 hours
+    expires_at = datetime.utcnow() + timedelta(hours=24)  # Token valid for 24 hours
 
     # Delete any existing unverified tokens for this email
     delete_query = email_verification_tokens.delete().where(email_verification_tokens.c.email == email)
@@ -191,4 +191,3 @@ async def verify_user_with_token(token: str) -> bool:
         await database.execute(delete_query)
         return True
     return False
-

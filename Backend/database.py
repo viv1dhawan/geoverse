@@ -34,5 +34,4 @@ async def create_table():
         # models is now a sibling file
         import models
         await conn.run_sync(metadata.create_all)
-    print("Database tables checked/created.")
-
+    print("Database tables created/checked.")

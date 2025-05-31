@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
@@ -55,3 +56,11 @@ class PlotlyGraph(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
 
+
+class EarthquakeQuery(BaseModel):
+    start_date: datetime
+    end_date: datetime
+    min_mag: Optional[float] = None
+    max_mag: Optional[float] = None
+    min_depth: Optional[float] = None
+    max_depth: Optional[float] = None

@@ -21,14 +21,14 @@ import db_info.application_db as application_db
 
 # Import Pydantic schemas from direct sub-packages
 from Schema.user_schema import UserCreate, UserOut, PasswordReset, PasswordResetRequest, EmailVerificationRequest, EmailVerification, UserUpdate
-from Schema.gravity_schema import GravityDataPoint, ProcessedGravityData, UploadResponse, AnomalyDetectionResult, ClusteringResult, PlotlyGraph, ErrorResponse
+from Schema.gravity_schema import EarthquakeQuery, GravityDataPoint, ProcessedGravityData, UploadResponse, AnomalyDetectionResult, ClusteringResult, PlotlyGraph, ErrorResponse
 
 # Define API Routers
 users_router = APIRouter()
 app_router = APIRouter()
 
 # --- Security Configuration ---
-SECRET_KEY = "IAMVIVEKDHAWAN_SUPER_SECRET_KEY" # IMPORTANT: Use environment variables in production!
+SECRET_KEY = "IAMVIVEKDHAWAN_SUPER_SECRET_KEY"  # IMPORTANT: Use environment variables in production!
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -106,7 +106,7 @@ async def password_reset_request(request: PasswordResetRequest):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     token = await user_db.create_password_reset_token(current_user["email"])
     # In a real application, you would send this token via email
-    print(f"Password reset token for {request.email}: {token}") # For testing/development
+    print(f"Password reset token for {request.email}: {token}")  # For testing/development
     return {"message": "Password reset token generated and (simulated) sent to email.", "token": token}
 
 @users_router.post("/password-reset", summary="Reset user password with token")
@@ -164,12 +164,12 @@ async def update_user_details(
     Allows updating first name, last name, and optionally the password.
     """
     user_email = current_user["email"]
-    updated_fields = user_update.model_dump(exclude_unset=True) # Get only fields that are set
+    updated_fields = user_update.model_dump(exclude_unset=True)  # Get only fields that are set
 
     if "new_password" in updated_fields and updated_fields["new_password"]:
         await user_db.update_password(user_email, updated_fields.pop("new_password"))
     
-    if updated_fields: # Update other fields if any remain
+    if updated_fields:  # Update other fields if any remain
         await user_db.update_user_details(user_email, updated_fields)
 
     # Fetch the updated user to return the latest state
@@ -220,7 +220,7 @@ def haversine(lat1, lon1, lat2, lon2):
 async def upload_gravity_data(file: UploadFile = File(...)):
     """
     Uploads a CSV file containing gravity data.
-    The CSV must have 'Latitude', 'Longitude', and 'Gravity' columns.
+    The CSV must have 'latitude', 'longitude', 'elevation', and 'gravity' columns.
     """
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file format. Please upload a CSV file.")
@@ -253,14 +253,14 @@ async def clear_all_gravity_data_api():
 async def calculate_bouguer_anomaly(df: pd.DataFrame = Depends(get_dataframe_dependency)):
     """
     Calculates the Bouguer anomaly for the loaded gravity data.
-    Requires 'Elevation' and 'Gravity' columns.
+    Requires 'elevation' and 'gravity' columns.
     """
     if 'elevation' not in df.columns or 'gravity' not in df.columns:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'elevation' or 'gravity' column in data.")
 
     # Apply Bouguer correction
     df["bouguer"] = df["gravity"] - (0.3086 * df["elevation"]) + (0.0419 * (RHO / 1000) * df["elevation"])
-    await application_db.update_gravity_data(df[['id', 'bouguer']]) # Update only the bouguer column
+    await application_db.update_gravity_data(df[['id', 'bouguer']])  # Update only the bouguer column
     return df.to_dict(orient="records")
 
 @app_router.get("/kmeans-clusters/", response_model=List[ClusteringResult], summary="Perform K-Means Clustering")
@@ -279,7 +279,7 @@ async def perform_kmeans_clustering(
     try:
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         df['cluster'] = kmeans.fit_predict(features)
-        await application_db.update_gravity_data(df[['id', 'cluster']]) # Update only the cluster column
+        await application_db.update_gravity_data(df[['id', 'cluster']])  # Update only the cluster column
         return df[['latitude', 'longitude', 'elevation', 'gravity', 'cluster']].to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"K-Means clustering failed: {e}")
@@ -300,7 +300,7 @@ async def perform_anomaly_detection(
     try:
         iso = IsolationForest(contamination=contamination, random_state=42)
         df["anomaly"] = iso.fit_predict(features)
-        await application_db.update_gravity_data(df[['id', 'anomaly']]) # Update only the anomaly column
+        await application_db.update_gravity_data(df[['id', 'anomaly']])  # Update only the anomaly column
         return df[['latitude', 'longitude', 'elevation', 'gravity', 'anomaly']].to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Isolation Forest anomaly detection failed: {e}")
@@ -309,7 +309,7 @@ async def perform_anomaly_detection(
 async def plot_map_bouguer(df: pd.DataFrame = Depends(get_dataframe_dependency)):
     """
     Generates a Plotly scatter map visualizing the Bouguer anomaly.
-    Requires 'Latitude', 'Longitude', and 'Bouguer' columns.
+    Requires 'latitude', 'longitude', and 'bouguer' columns.
     """
     if 'bouguer' not in df.columns or df['bouguer'].isnull().all():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bouguer anomaly not calculated or all values are null. Please run /gravity/bouguer-anomaly first.")
@@ -333,7 +333,7 @@ async def plot_map_bouguer(df: pd.DataFrame = Depends(get_dataframe_dependency))
 async def plot_map_anomaly(df: pd.DataFrame = Depends(get_dataframe_dependency)):
     """
     Generates a Plotly scatter map visualizing the anomaly detection results.
-    Requires 'Latitude', 'Longitude', and 'Anomaly' columns.
+    Requires 'latitude', 'longitude', and 'anomaly' columns.
     """
     if 'anomaly' not in df.columns or df['anomaly'].isnull().all():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Anomaly detection not performed or all values are null. Please run /gravity/anomaly-detection first.")
@@ -343,7 +343,7 @@ async def plot_map_anomaly(df: pd.DataFrame = Depends(get_dataframe_dependency))
         lat="latitude",
         lon="longitude",
         color="anomaly",
-        color_discrete_map={-1: "red", 1: "blue"}, # -1 = anomaly, 1 = normal
+        color_discrete_map={-1: "red", 1: "blue"},  # -1 = anomaly, 1 = normal
         title="Gravity Anomaly Detection",
         hover_name="anomaly",
         hover_data={"latitude": True, "longitude": True, "elevation": True, "gravity": True, "anomaly": True},
@@ -357,7 +357,7 @@ async def plot_map_anomaly(df: pd.DataFrame = Depends(get_dataframe_dependency))
 async def plot_map_clusters(df: pd.DataFrame = Depends(get_dataframe_dependency)):
     """
     Generates a Plotly scatter map visualizing the K-Means clustering results.
-    Requires 'Latitude', 'Longitude', and 'Cluster' columns.
+    Requires 'latitude', 'longitude', and 'cluster' columns.
     """
     if 'cluster' not in df.columns or df['cluster'].isnull().all():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="K-Means clustering not performed or all values are null. Please run /gravity/kmeans-clusters first.")
@@ -383,7 +383,7 @@ async def interpolate_gravity(
 ):
     """
     Interpolates gravity data and generates a contour map.
-    Requires 'Latitude', 'Longitude', and 'Gravity' columns.
+    Requires 'latitude', 'longitude', and 'gravity' columns.
     """
     if 'gravity' not in df.columns:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'gravity' column in data.")
@@ -415,7 +415,7 @@ async def interpolate_gravity(
             title='Interpolated Gravity Map',
             xaxis_title='Longitude',
             yaxis_title='Latitude',
-            geo_scope='world' # Ensure the map is displayed globally
+            geo_scope='world'  # Ensure the map is displayed globally
         )
         # Return Plotly graph as JSON
         return PlotlyGraph(**json.loads(fig.to_json()))
@@ -435,22 +435,15 @@ async def calculate_distance_from_point(
         lambda row: haversine(ref_lat, ref_lon, row['latitude'], row['longitude']),
         axis=1
     )
-    await application_db.update_gravity_data(df[['id', 'distance_km']]) # Update only the distance_km column
+    await application_db.update_gravity_data(df[['id', 'distance_km']])  # Update only the distance_km column
     return df.to_dict(orient="records")
 
-@app_router.get("/earthquakes", summary="Fetch Earthquake Data")
-async def fetch_earthquakes(
-    start_date: datetime,
-    end_date: datetime,
-    min_mag: Optional[float] = None,
-    max_mag: Optional[float] = None,
-    min_depth: Optional[float] = None,
-    max_depth: Optional[float] = None,
-):
+@app_router.post("/earthquakes", summary="Fetch Earthquake Data")
+async def fetch_earthquakes(query: EarthquakeQuery):
     """
     Retrieves earthquake data based on specified filters.
     """
-    rows = await application_db.get_earthquakes(start_date, end_date, min_mag, max_mag, min_depth, max_depth)
+    rows = await application_db.get_earthquakes(query)  # Pass the 'query' object
     return [
         {
             "id": row["id"],
@@ -463,6 +456,3 @@ async def fetch_earthquakes(
         }
         for row in rows
     ]
-
-
-
