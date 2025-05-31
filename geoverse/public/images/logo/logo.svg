@@ -1,0 +1,27 @@
+<svg
+  width="250"
+  height="80"
+  viewBox="0 0 250 80"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- Icon: A stylized globe -->
+  <circle cx="40" cy="40" r="30" stroke="#007BFF" stroke-width="5" fill="none" />
+  <path
+    d="M10 40 Q40 10 70 40 Q40 70 10 40"
+    stroke="#007BFF"
+    stroke-width="3"
+    fill="none"
+  />
+  <path
+    d="M40 10 Q70 40 40 70 Q10 40 40 10"
+    stroke="#007BFF"
+    stroke-width="3"
+    fill="none"
+  />
+
+  <!-- Text: Geoverse -->
+  <text x="80" y="50" font-family="Arial, sans-serif" font-size="30" fill="#007BFF" font-weight="bold">
+    Geoverse
+  </text>
+</svg>
