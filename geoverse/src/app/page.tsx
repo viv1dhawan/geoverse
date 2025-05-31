@@ -32,8 +32,6 @@ export default function Home() {
       <Blog />
       <FrequantlyAskQuestion />
       <Contact />
-      {/* <SelectAppPage /> */}
-      <UserProfile />
     </>
   );
 }
